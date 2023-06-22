@@ -5,6 +5,7 @@ import random
 
 # chillin imports
 from chillin_client import RealtimeAI
+import numpy as np
 
 # project imports
 from ks.models import ECell, EDirection, Position
@@ -37,40 +38,102 @@ class AI(RealtimeAI):
                 score = self.world.constants.coefficient_score_wall
             elif self.world.board[x][y + 1] == ECell.AreaWall:
                 score = -self.world.constants.area_wall_crash_score
-            elif self.world.board[x][y + 1] == ECell.BlueWall and my_team == "Yellow" and agent.wall_breaker_rem_time > 0:
+            elif self.world.board[x][y + 1] == ECell.BlueWall and \
+                my_team == "Yellow" and agent.wall_breaker_rem_time > 0:
                 score = self.world.constants.coefficient_score_wall * 2
-            elif self.world.board[x][y + 1] == ECell.BlueWall and my_team == "Yellow" and agent.wall_breaker_rem_time <= 0:
+            elif self.world.board[x][y + 1] == ECell.BlueWall and \
+                my_team == "Yellow" and agent.wall_breaker_rem_time <= 0:
                 score = self.world.constants.coefficient_score_wall
-        # elif dir.Down:
-        #     if self.world.board[x][y - 1] == ECell.Empty:
-        #         return True, self.world.constants.coefficient_score_wall
-        # elif dir.Right:
-        #     if self.world.board[x + 1][y] == ECell.Empty:
-        #         return True, self.world.constants.coefficient_score_wall
-        # else:
-        #     if self.world.board[x - 1][y] == ECell.Empty:
-        #         return True, self.world.constants.coefficient_score_wall
+            elif self.world.board[x][y + 1] == ECell.YellowWall and \
+                my_team == "Blue" and agent.wall_breaker_rem_time > 0:
+                score = self.world.constants.coefficient_score_wall * 2
+            elif self.world.board[x][y + 1] == ECell.YellowWall and \
+                my_team == "Blue" and agent.wall_breaker_rem_time <= 0:
+                score = self.world.constants.coefficient_score_wall
+                ######### this state for collision of two agent 
+            elif  self.world.board[x][y + 1] == self.my_side==self.other_side:
+                 score = -self.world.constants.area_wall_crash_score
+
+            return score
+
+        if dir.Down:
+            if self.world.board[x][y - 1] == ECell.Empty :
+                score = self.world.constants.coefficient_score_wall
+            elif self.world.board[x][y - 1] == ECell.AreaWall:
+                score = -self.world.constants.area_wall_crash_score
+            elif self.world.board[x][y - 1] == ECell.BlueWall and \
+                my_team == "Yellow" and agent.wall_breaker_rem_time > 0:
+                score = self.world.constants.coefficient_score_wall * 2
+            elif self.world.board[x][y - 1] == ECell.BlueWall and \
+                my_team == "Yellow" and agent.wall_breaker_rem_time <= 0:
+                score = self.world.constants.coefficient_score_wall
+            elif self.world.board[x][y - 1] == ECell.YellowWall and \
+                my_team == "Blue" and agent.wall_breaker_rem_time > 0:
+                score = self.world.constants.coefficient_score_wall * 2
+            elif self.world.board[x][y - 1] == ECell.YellowWall and \
+                my_team == "Blue" and agent.wall_breaker_rem_time <= 0:
+                score = self.world.constants.coefficient_score_wall
+                ######### this state for collision of two agent 
+            elif  self.world.board[x][y - 1] == self.my_side==self.other_side:
+                 score = -self.world.constants.area_wall_crash_score    
+
+            return score
+
+
+        if dir.Right:
+            if self.world.board[x + 1][y] == ECell.Empty :
+                score = self.world.constants.coefficient_score_wall
+            elif self.world.board[x + 1][y] == ECell.AreaWall:
+                score = -self.world.constants.area_wall_crash_score
+            elif self.world.board[x + 1][y] == ECell.BlueWall and \
+                my_team == "Yellow" and agent.wall_breaker_rem_time > 0:
+                score = self.world.constants.coefficient_score_wall * 2
+            elif self.world.board[x + 1][y] == ECell.BlueWall and \
+                my_team == "Yellow" and agent.wall_breaker_rem_time <= 0:
+                score = self.world.constants.coefficient_score_wall
+            elif self.world.board[x + 1][y] == ECell.YellowWall and \
+                my_team == "Blue" and agent.wall_breaker_rem_time > 0:
+                score = self.world.constants.coefficient_score_wall * 2
+            elif self.world.board[x + 1][y] == ECell.YellowWall and \
+                my_team == "Blue" and agent.wall_breaker_rem_time <= 0:
+                score = self.world.constants.coefficient_score_wall
+                ######### this state for collision of two agent 
+            elif  self.world.board[x + 1][y] == self.my_side==self.other_side:
+                 score = -self.world.constants.area_wall_crash_score    
+
+            return score
+        
+        if dir.Left:
+            if self.world.board[x - 1][y] == ECell.Empty :
+                score = self.world.constants.coefficient_score_wall
+            elif self.world.board[x - 1][y] == ECell.AreaWall:
+                score = -self.world.constants.area_wall_crash_score
+            elif self.world.board[x - 1][y] == ECell.BlueWall and \
+                my_team == "Yellow" and agent.wall_breaker_rem_time > 0:
+                score = self.world.constants.coefficient_score_wall * 2
+            elif self.world.board[x - 1][y] == ECell.BlueWall and \
+                my_team == "Yellow" and agent.wall_breaker_rem_time <= 0:
+                score = self.world.constants.coefficient_score_wall
+            elif self.world.board[x - 1][y] == ECell.YellowWall and \
+                my_team == "Blue" and agent.wall_breaker_rem_time > 0:
+                score = self.world.constants.coefficient_score_wall * 2
+            elif self.world.board[x - 1][y] == ECell.YellowWall and \
+                my_team == "Blue" and agent.wall_breaker_rem_time <= 0:
+                score = self.world.constants.coefficient_score_wall
+                ######### this state for collision of two agent 
+            elif  self.world.board[x - 1][y] == self.my_side==self.other_side:
+                 score = -self.world.constants.area_wall_crash_score  
+
         return score
 
+        
+    def alpha_beta_cutoff(self):    
+             max_val = -np.inf
+             
 
-    # def valid_dir_with_wallbreaker(self, dir:EDirection):
-    #     agent = self.world.agents[self.my_side]
-    #     x =  agent.position.x
-    #     y =  agent.position.y
-    #     if dir.Up:
-    #         if self.world.board[x][y + 1] != ECell.Empty and agent.wall_breaker_rem_time > 0:
-    #             return True
-    #     elif dir.Down:
-    #         if self.world.board[x][y - 1] != ECell.Empty and agent.wall_breaker_rem_time > 0:
-    #             return True
-    #     elif dir.Right:
-    #         if self.world.board[x + 1][y] != ECell.Empty and agent.wall_breaker_rem_time > 0:
-    #             return True
-    #     else:
-    #         if self.world.board[x - 1][y] != ECell.Empty and agent.wall_breaker_rem_time > 0:
-    #             return True
-    #     return False
 
+
+        
     def decide(self):
         print('decide')
         alpha = -math.inf

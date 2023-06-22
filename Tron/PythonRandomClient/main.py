@@ -9,7 +9,7 @@ import sys
 from chillin_client import GameClient
 
 # project imports
-from ai import AI
+from Tron.PythonClient.ai import AI
 from ks.models import World
 
 
