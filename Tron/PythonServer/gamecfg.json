@@ -12,14 +12,14 @@
 	},
 
 	"net": {
-		"host": "0.0.0.0",
+		"host": "127.0.0.1",
 		"port": 5000,
 		"keyfile": "certs/key.pem",
 		"certfile": "certs/cert.pem"
 	},
 
 	"gui": {
-		"host": "0.0.0.0",
+		"host": "127.0.0.1",
 		"port": 5001,
 		"max_spectators": 3,
 		"save_replay": true,
