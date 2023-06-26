@@ -86,7 +86,7 @@ class AI(RealtimeAI):
                            agent.position, other.position,
                            self.world.constants.max_cycles * 2, 0, 0)
 
-    def tournament_selection(self, ways, scores, q=40):
+    def tournament_selection(self, ways, scores, q=10):
         selected = []
         for i in range(len(ways)):
             participants = random.sample(range(len(ways)), q)
@@ -110,11 +110,26 @@ class AI(RealtimeAI):
             if rand() < mutation_rate:
                 bitstring[i] = 1 - bitstring[i]
 
-    def genetic_algorithm(self, mutation_rate, cross_rate, depth, iteration_size, population_size):
-        population = [randint(0, 6, depth).tolist() for _ in range(population_size)]
-        best, best_eval = 0, self.wining_move(population[0])
+    def find_initial_chromosome(self, state, depth):
+        board_copy = cp.deepcopy(state)
+        chromosome = []
+        for i in range(depth):
+            action = random.choice(self.valid_dirs(board_copy, 1 if i % 2 == 0 else 0))
+            chromosome.append(action)
+            self.do_action(board_copy, action, 1 if i % 2 == 0 else 0, self.my_side, self.other_side)
+        return chromosome
+
+    def find_chromosome_state(self, state, chromosome):
+        for i, val in enumerate(chromosome):
+            self.do_action(state, val, 1 if i % 2 == 0 else 0, self.my_side, self.other_side)
+        return state
+
+    def genetic_algorithm(self, state, mutation_rate, cross_rate, depth, iteration_size, population_size):
+        state_copy = cp.deepcopy(state)
+        population = [self.find_initial_chromosome(state_copy, depth) for _ in range(population_size)]
+        best, best_eval = 0, self.winning_move(self.find_chromosome_state(state_copy, population[0]))
         for gen in range(iteration_size):
-            scores = [self.wining_move(c) for c in population]
+            scores = [self.winning_move(self.find_chromosome_state(state_copy, c)) for c in population]
             for i in range(population_size):
                 if scores[i] < best_eval:
                     best, best_eval = population[i], scores[i]
@@ -209,6 +224,7 @@ class AI(RealtimeAI):
             if activate_wallbreaker == 1:  # activated wallbreaker
                 state.my_rem_time = self.world.constants.wall_breaker_duration
                 state.my_cool_time = self.world.constants.wall_breaker_cooldown
+                state.my_score += self.world.constants.wall_score_coefficient
 
             else:
                 if state.my_rem_time > 0:  # wallbreaker active
@@ -230,8 +246,8 @@ class AI(RealtimeAI):
                         state.my_score += self.world.constants.my_wall_crash_score
 
         else:
-            x = state.my_position.x
-            y = state.my_position.y
+            x = state.other_position.x
+            y = state.other_position.y
 
             state.board[y][x] = ECell.YellowWall if OTHER_SIDE == 'Yellow' else ECell.BlueWall
             state.other_direction = direction
@@ -245,10 +261,12 @@ class AI(RealtimeAI):
 
             if state.board[y][x] == ECell.AreaWall:
                 state.other_health = 0
+                state.other_score += self.world.constants.area_wall_crash_score
 
             if activate_wallbreaker == 1:  # activated wallbreaker
                 state.other_rem_time = self.world.constants.wall_breaker_duration
                 state.other_cool_time = self.world.constants.wall_breaker_cooldown
+                state.other_score += self.world.constants.wall_score_coefficient
 
             else:
                 if state.other_rem_time > 0:  # wallbreaker active
@@ -325,14 +343,17 @@ class AI(RealtimeAI):
                       agent.wall_breaker_cooldown, other.wall_breaker_cooldown,
                       agent.health, other.health,
                       agent.position, other.position,
-                      self.world.constants.max_cycles * 2, self.state.my_score, self.state.other_score)
+                      self.world.constants.max_cycles * 2, self.world.scores[self.my_side] +
+                      (agent.health * self.world.constants.my_wall_crash_score),
+                      self.world.scores[self.other_side] +
+                      (other.health * self.world.constants.my_wall_crash_score))
 
         print('decide')
         action, value = self.minimax(state, 6, -math.inf, math.inf, True)
         direction, activate = action
-
+        # best, _ = self.genetic_algorithm(state, 0.01, 0.9, 6, 1000, 100)
+        # direction, activate = best[0]
         print(action, value)
-
         if activate:
             self.send_command(ActivateWallBreaker())
         self.send_command(ChangeDirection(direction))
