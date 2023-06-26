@@ -94,8 +94,7 @@ class AI(RealtimeAI):
                            self.world.constants.wall_breaker_cooldown, self.world.constants.wall_breaker_cooldown,
                            self.world.constants.init_health, self.world.constants.init_health,
                            agent.position, other.position,
-                           self.world.constants.max_cycles * 2
-                           )
+                           self.world.constants.max_cycles * 2)
 
     def valid_dirs(self, state, SIDE):
         valids = []
@@ -151,9 +150,27 @@ class AI(RealtimeAI):
                         other_wall_count += 1
 
         score = (my_wall_count - other_wall_count) + (state.my_health - state.other_health) * \
-                self.world.constants.my_wall_crash_score  # TODO
-        if state.board[state.my_position.y][state.my_position.x] == ECell.AreaWall:
-            return score - self.world.constants.area_wall_crash_score
+                self.world.constants.my_wall_crash_score * -1  # TODO
+        y = state.my_position.y
+        x = state.my_position.x
+        if state.board[y][x] == ECell.BlueWall and self.my_side == "Yellow":
+            if state.my_rem_time > 0:
+                score += self.world.constants.wall_score_coefficient * 2
+            else:
+                score += self.world.constants.enemy_wall_crash_score
+        elif state.board[y][x] == ECell.BlueWall and self.my_side == "Blue":
+            if state.my_rem_time <= 0:
+                score += self.world.constants.my_wall_crash_score
+        elif state.board[y][x] == ECell.YellowWall and self.my_side == "Blue":
+            if state.my_rem_time > 0:
+                score += self.world.constants.wall_score_coefficient * 2
+            else:
+                score += self.world.constants.enemy_wall_crash_score
+        elif state.board[y][x] == ECell.YellowWall and self.my_side == "Yellow":
+            if state.my_rem_time <= 0:
+                score += self.world.constants.my_wall_crash_score
+        if state.board[y][x] == ECell.AreaWall:
+            return score + self.world.constants.area_wall_crash_score
         return score
 
     def do_action(self, state, action, SIDE, MY_SIDE, OTHER_SIDE):  # SIDE = 1 my side
@@ -237,7 +254,7 @@ class AI(RealtimeAI):
 
     def minimax(self, board, depth, alpha, beta, maximizingPlayer):
         valid_directions = self.valid_dirs(board, 1 if maximizingPlayer else 0)
-        print(self.winning_move(board))
+       # print(self.winning_move(board))
         is_terminal = self.is_terminal_node(board)
         if depth == 0 or is_terminal:
             if is_terminal:
@@ -285,17 +302,13 @@ class AI(RealtimeAI):
         agent = self.world.agents[self.my_side]
         other = self.world.agents[self.other_side]
 
-        print(self.other_side)
-        print(self.my_side)
-
         state = State(self.world.board, len(self.world.board[0]),
                       len(self.world.board), agent.direction, other.direction,
                       agent.wall_breaker_rem_time, other.wall_breaker_rem_time,
                       agent.wall_breaker_cooldown, other.wall_breaker_cooldown,
                       agent.health, other.health,
                       agent.position, other.position,
-                      self.world.constants.max_cycles * 2
-                      )
+                      self.world.constants.max_cycles * 2)
 
         print('decide')
         action, value = self.minimax(state, 6, -math.inf, math.inf, True)
