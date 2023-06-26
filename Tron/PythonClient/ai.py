@@ -96,6 +96,48 @@ class AI(RealtimeAI):
                            agent.position, other.position,
                            self.world.constants.max_cycles * 2)
 
+    def tournament_selection(self, ways, scores, q=40):
+        selected = []
+        for i in range(len(ways)):
+            participants = random.sample(range(len(ways)), q)
+            winner = participants[0]
+            for p in participants[1:]:
+                if scores[p] < scores[winner]:
+                    winner = p
+            selected.append(ways[winner])
+        return selected
+
+    def crossover(self, parent1, parent2, cross_rate):
+        child1, child2 = parent1.copy(), parent2.copy()
+        if rand() < cross_rate:
+            pt = randint(1, len(parent1) - 2)
+            child1 = parent1[:pt] + parent2[pt:]
+            child2 = parent2[:pt] + parent2[pt:]
+        return [child1, child2]
+
+    def mutation(self, bitstring, mutation_rate):
+        for i in range(len(bitstring)):
+            if rand() < mutation_rate:
+                bitstring[i] = 1 - bitstring[i]
+
+    def genetic_algorithm(self, objective, mutation_rate, cross_rate, depth, iteration_size, population_size):
+        population = [randint(0, 6, depth).tolist() for _ in range(population_size)]
+        best, best_eval = 0, wining_move(population[0])
+        for gen in range(iteration_size):
+            scores = [wining_move(c) for c in population]
+            for i in range(population_size):
+                if scores[i] < best_eval:
+                    best, best_eval = population[i], scores[i]
+            selected = self.tournament_selection(population, scores)
+            children = []
+            for i in range(0, len(selected), 2):
+                parent1, parent2 = selected[i], selected[i + 1]
+                for child in self.crossover(parent1, parent2, cross_rate):
+                    self.mutation(child, mutation_rate)
+                    children.append(child)
+            population = children
+        return [best, best_eval]
+
     def valid_dirs(self, state, SIDE):
         valids = []
 
