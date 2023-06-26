@@ -108,7 +108,10 @@ class AI(RealtimeAI):
     def mutation(self, bitstring, mutation_rate):
         for i in range(len(bitstring)):
             if rand() < mutation_rate:
-                bitstring[i] = 1 - bitstring[i]
+                to_replace = randint(0, len(bitstring))
+                temp = bitstring[i]
+                bitstring[i] = bitstring[to_replace]
+                bitstring[to_replace] = temp
 
     def find_initial_chromosome(self, state, depth):
         board_copy = cp.deepcopy(state)
@@ -125,11 +128,10 @@ class AI(RealtimeAI):
         return state
 
     def genetic_algorithm(self, state, mutation_rate, cross_rate, depth, iteration_size, population_size):
-        state_copy = cp.deepcopy(state)
-        population = [self.find_initial_chromosome(state_copy, depth) for _ in range(population_size)]
-        best, best_eval = 0, self.winning_move(self.find_chromosome_state(state_copy, population[0]))
+        population = [self.find_initial_chromosome(state, depth) for _ in range(population_size)]
+        best, best_eval = 0, self.winning_move(self.find_chromosome_state(cp.deepcopy(state), population[0]))
         for gen in range(iteration_size):
-            scores = [self.winning_move(self.find_chromosome_state(state_copy, c)) for c in population]
+            scores = [self.winning_move(self.find_chromosome_state(cp.deepcopy(state), c)) for c in population]
             for i in range(population_size):
                 if scores[i] < best_eval:
                     best, best_eval = population[i], scores[i]
@@ -216,7 +218,6 @@ class AI(RealtimeAI):
 
             # update state
             state.my_position = Position(x, y)
-
             if state.board[y][x] == ECell.AreaWall:
                 state.my_health = 0
                 state.my_score += self.world.constants.area_wall_crash_score
@@ -258,7 +259,6 @@ class AI(RealtimeAI):
 
             # update state
             state.other_position = Position(x, y)
-
             if state.board[y][x] == ECell.AreaWall:
                 state.other_health = 0
                 state.other_score += self.world.constants.area_wall_crash_score
@@ -349,11 +349,12 @@ class AI(RealtimeAI):
                       (other.health * self.world.constants.my_wall_crash_score))
 
         print('decide')
-        action, value = self.minimax(state, 6, -math.inf, math.inf, True)
-        direction, activate = action
-        # best, _ = self.genetic_algorithm(state, 0.01, 0.9, 6, 1000, 100)
-        # direction, activate = best[0]
-        print(action, value)
+        # action, value = self.minimax(state, 6, -math.inf, math.inf, True)
+        # direction, activate = action
+        best, value = self.genetic_algorithm(state, 0.01, 0.9, 6, 1000, 100)
+        direction, activate = best[0]
+        # print(action, value)
+        print(best[0], value)
         if activate:
             self.send_command(ActivateWallBreaker())
         self.send_command(ChangeDirection(direction))

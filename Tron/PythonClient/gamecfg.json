@@ -7,8 +7,8 @@
 	},
 
 	"net": {
-		"host": "185.94.96.76",
-		"port": 32680,
+		"host": "localhost",
+		"port": 5000,
 		"max_tries": 5,
 		"retry_waiting_time": 1,
 		"timeout": 2
