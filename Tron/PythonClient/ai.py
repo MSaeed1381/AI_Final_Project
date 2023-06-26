@@ -4,6 +4,9 @@ import random
 from enum import Enum
 import copy as cp
 
+from numpy.random import randint
+from numpy.random import rand
+
 # chillin imports
 from chillin_client import RealtimeAI
 
@@ -42,7 +45,7 @@ class State:
                  my_rem_time, other_rem_time, my_cool_time, other_cool_time,
                  my_health, other_health,
                  my_position, other_position,
-                 depth):
+                 depth, my_score, other_score):
 
         self.n = n
         self.m = m
@@ -58,21 +61,8 @@ class State:
         self.my_position = my_position
         self.other_position = other_position
         self.depth = depth
-
-    def inside_board(self, position, move: Move):
-        x = position[0]
-        y = position[1]
-
-        if move == Move.Up and 0 <= x - 1 < self.m:
-            return True
-        elif move == Move.Down and 0 <= x + 1 < self.m:
-            return True
-        elif move == Move.Left and 0 <= y - 1 < self.n:
-            return True
-        elif move == Move.Right and 0 <= y + 1 < self.n:
-            return True
-
-        return False
+        self.my_score = my_score
+        self.other_score = other_score
 
 
 class AI(RealtimeAI):
@@ -94,7 +84,7 @@ class AI(RealtimeAI):
                            self.world.constants.wall_breaker_cooldown, self.world.constants.wall_breaker_cooldown,
                            self.world.constants.init_health, self.world.constants.init_health,
                            agent.position, other.position,
-                           self.world.constants.max_cycles * 2)
+                           self.world.constants.max_cycles * 2, 0, 0)
 
     def tournament_selection(self, ways, scores, q=40):
         selected = []
@@ -120,11 +110,11 @@ class AI(RealtimeAI):
             if rand() < mutation_rate:
                 bitstring[i] = 1 - bitstring[i]
 
-    def genetic_algorithm(self, objective, mutation_rate, cross_rate, depth, iteration_size, population_size):
+    def genetic_algorithm(self, mutation_rate, cross_rate, depth, iteration_size, population_size):
         population = [randint(0, 6, depth).tolist() for _ in range(population_size)]
-        best, best_eval = 0, wining_move(population[0])
+        best, best_eval = 0, self.wining_move(population[0])
         for gen in range(iteration_size):
-            scores = [wining_move(c) for c in population]
+            scores = [self.wining_move(c) for c in population]
             for i in range(population_size):
                 if scores[i] < best_eval:
                     best, best_eval = population[i], scores[i]
@@ -191,33 +181,11 @@ class AI(RealtimeAI):
                     elif board[i][j] == ECell.YellowWall:
                         other_wall_count += 1
 
-        score = (my_wall_count - other_wall_count) + (state.my_health - state.other_health) * \
-                self.world.constants.my_wall_crash_score * -1  # TODO
-        y = state.my_position.y
-        x = state.my_position.x
-        if state.board[y][x] == ECell.BlueWall and self.my_side == "Yellow":
-            if state.my_rem_time > 0:
-                score += self.world.constants.wall_score_coefficient * 2
-            else:
-                score += self.world.constants.enemy_wall_crash_score
-        elif state.board[y][x] == ECell.BlueWall and self.my_side == "Blue":
-            if state.my_rem_time <= 0:
-                score += self.world.constants.my_wall_crash_score
-        elif state.board[y][x] == ECell.YellowWall and self.my_side == "Blue":
-            if state.my_rem_time > 0:
-                score += self.world.constants.wall_score_coefficient * 2
-            else:
-                score += self.world.constants.enemy_wall_crash_score
-        elif state.board[y][x] == ECell.YellowWall and self.my_side == "Yellow":
-            if state.my_rem_time <= 0:
-                score += self.world.constants.my_wall_crash_score
-        if state.board[y][x] == ECell.AreaWall:
-            return score + self.world.constants.area_wall_crash_score
-        return score
+        score = (my_wall_count - other_wall_count)
+        return score + state.my_score - state.other_score
 
     def do_action(self, state, action, SIDE, MY_SIDE, OTHER_SIDE):  # SIDE = 1 my side
-        activate_wallbreaker = action[1]
-        direction = action[0]
+        direction, activate_wallbreaker = action
 
         state.depth -= 1
         if SIDE:
@@ -228,15 +196,15 @@ class AI(RealtimeAI):
             state.my_direction = direction
 
             pos = dir_to_pos(direction)
-            x = pos.x + state.my_position.x
-            y = pos.y + state.my_position.y
+            x += pos.x
+            y += pos.y
 
             # update state
-            state.my_position.x = x
-            state.my_position.y = y
+            state.my_position = Position(x, y)
 
             if state.board[y][x] == ECell.AreaWall:
                 state.my_health = 0
+                state.my_score += self.world.constants.area_wall_crash_score
 
             if activate_wallbreaker == 1:  # activated wallbreaker
                 state.my_rem_time = self.world.constants.wall_breaker_duration
@@ -249,28 +217,31 @@ class AI(RealtimeAI):
                     state.my_cool_time -= 1
 
                     if state.board[y][x] == ECell.BlueWall and MY_SIDE == "Yellow":
-                        state.my_health -= 1  # TODO
+                        state.my_health -= 1
+                        state.my_score += self.world.constants.enemy_wall_crash_score
                     elif state.board[y][x] == ECell.YellowWall and MY_SIDE == "Blue":
-                        state.my_health -= 1  # TODO
+                        state.my_health -= 1
+                        state.my_score += self.world.constants.enemy_wall_crash_score
                     elif state.board[y][x] == ECell.YellowWall and MY_SIDE == "Yellow":
-                        state.my_health -= 1  # TODO
+                        state.my_health -= 1
+                        state.my_score += self.world.constants.my_wall_crash_score
                     elif state.board[y][x] == ECell.BlueWall and MY_SIDE == "Blue":
                         state.my_health -= 1
+                        state.my_score += self.world.constants.my_wall_crash_score
 
         else:
-            x = state.other_position.x
-            y = state.other_position.y
+            x = state.my_position.x
+            y = state.my_position.y
 
             state.board[y][x] = ECell.YellowWall if OTHER_SIDE == 'Yellow' else ECell.BlueWall
             state.other_direction = direction
 
             pos = dir_to_pos(direction)
-            x = pos.x + state.other_position.x
-            y = pos.y + state.other_position.y
+            x += pos.x
+            y += pos.y
 
             # update state
-            state.other_position.x = x
-            state.other_position.y = y
+            state.other_position = Position(x, y)
 
             if state.board[y][x] == ECell.AreaWall:
                 state.other_health = 0
@@ -286,13 +257,17 @@ class AI(RealtimeAI):
                     state.other_cool_time -= 1
 
                     if state.board[y][x] == ECell.BlueWall and OTHER_SIDE == "Yellow":
-                        state.other_health -= 1  # TODO
+                        state.other_health -= 1
+                        state.other_score += self.world.constants.enemy_wall_crash_score
                     elif state.board[y][x] == ECell.YellowWall and OTHER_SIDE == "Blue":
-                        state.other_health -= 1  # TODO
+                        state.other_health -= 1
+                        state.other_score += self.world.constants.enemy_wall_crash_score
                     elif state.board[y][x] == ECell.YellowWall and OTHER_SIDE == "Yellow":
-                        state.other_health -= 1  # TODO
+                        state.other_health -= 1
+                        state.other_score += self.world.constants.my_wall_crash_score
                     elif state.board[y][x] == ECell.BlueWall and OTHER_SIDE == "Blue":
                         state.other_health -= 1
+                        state.other_score += self.world.constants.my_wall_crash_score
 
     def minimax(self, board, depth, alpha, beta, maximizingPlayer):
         valid_directions = self.valid_dirs(board, 1 if maximizingPlayer else 0)
@@ -343,14 +318,14 @@ class AI(RealtimeAI):
     def decide(self):
         agent = self.world.agents[self.my_side]
         other = self.world.agents[self.other_side]
-
+        print(self.state.my_score, self.state.other_score)
         state = State(self.world.board, len(self.world.board[0]),
                       len(self.world.board), agent.direction, other.direction,
                       agent.wall_breaker_rem_time, other.wall_breaker_rem_time,
                       agent.wall_breaker_cooldown, other.wall_breaker_cooldown,
                       agent.health, other.health,
                       agent.position, other.position,
-                      self.world.constants.max_cycles * 2)
+                      self.world.constants.max_cycles * 2, self.state.my_score, self.state.other_score)
 
         print('decide')
         action, value = self.minimax(state, 6, -math.inf, math.inf, True)

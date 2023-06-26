@@ -8,7 +8,7 @@
 
 	"net": {
 		"host": "185.94.96.76",
-		"port": 38444,
+		"port": 36778,
 		"max_tries": 5,
 		"retry_waiting_time": 1,
 		"timeout": 2
