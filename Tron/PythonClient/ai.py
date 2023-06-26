@@ -105,13 +105,23 @@ class AI(RealtimeAI):
             child2 = parent2[:pt] + parent2[pt:]
         return [child1, child2]
 
+    def is_opposite(self, direction1, direction2):
+        if (direction1 == EDirection.Up and direction2 == EDirection.Down) or \
+                (direction1 == EDirection.Down and direction2 == EDirection.Up) or \
+                (direction1 == EDirection.Left and direction2 == EDirection.Right) or \
+                (direction1 == EDirection.Right and direction2 == EDirection.Left):
+            return True
+        return False
+
     def mutation(self, bitstring, mutation_rate):
-        for i in range(len(bitstring)):
+        for i in range(1, len(bitstring)):
             if rand() < mutation_rate:
-                to_replace = randint(0, len(bitstring))
-                temp = bitstring[i]
-                bitstring[i] = bitstring[to_replace]
-                bitstring[to_replace] = temp
+                to_replace = randint(1, len(bitstring))
+                if not self.is_opposite(bitstring[to_replace][0], bitstring[i - 1][0]) and not self.is_opposite(
+                        bitstring[to_replace - 1][0], bitstring[i][0]):
+                    temp = bitstring[i]
+                    bitstring[i] = bitstring[to_replace]
+                    bitstring[to_replace] = temp
 
     def find_initial_chromosome(self, state, depth):
         board_copy = cp.deepcopy(state)
@@ -203,7 +213,6 @@ class AI(RealtimeAI):
 
     def do_action(self, state, action, SIDE, MY_SIDE, OTHER_SIDE):  # SIDE = 1 my side
         direction, activate_wallbreaker = action
-
         state.depth -= 1
         if SIDE:
             x = state.my_position.x
@@ -218,6 +227,7 @@ class AI(RealtimeAI):
 
             # update state
             state.my_position = Position(x, y)
+
             if state.board[y][x] == ECell.AreaWall:
                 state.my_health = 0
                 state.my_score += self.world.constants.area_wall_crash_score
